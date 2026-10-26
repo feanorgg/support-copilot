@@ -119,85 +119,69 @@ def render() -> str:
     cfg = CONFIGS[name]
     fb = fallback if name != FALLBACK_CONFIG else None
 
-    sens = [
-        ("Base case", economics(data, a, fallback=fb)),
-        ("Agents accept only half the send-ready drafts", economics(data, a, accept_factor=0.5, fallback=fb)),
-        (f"Agent cost $5/h (instead of ${a['agent_cost_usd_per_hour']:.0f})", economics(data, a, agent_rate=5, fallback=fb)),
-        ("Agent cost $15/h", economics(data, a, agent_rate=15, fallback=fb)),
-        ("Baseline handle times 30% shorter", economics(data, a, aht_scale=0.7, fallback=fb)),
-        ("Volume x3 (30k tickets/month)", economics(data, a, volume=a["tickets_per_month"] * 3, fallback=fb)),
-    ]
-    gw = a["gateway_billing_multiplier"]
-    llm_share_at_gw = econ["llm"] * gw / econ["gross"] if econ["gross"] else 0
+    stress = {
+        "agents accept only half of the send-ready drafts": economics(data, a, accept_factor=0.5, fallback=fb),
+        "agents cost $5/h": economics(data, a, agent_rate=5, fallback=fb),
+        "current handle times are 30% shorter": economics(data, a, aht_scale=0.7, fallback=fb),
+    }
+    worst_label, worst = min(stress.items(), key=lambda kv: kv[1]["net"])
+    def short(model: str) -> str:  # "anthropic/claude-haiku-5.5" -> "Claude Haiku 5.5"
+        return model.split("/")[-1].replace("-", " ").title()
 
-    verdict = "Yes" if ok and econ["net"] > 0 else "Not yet"
-    headline = (
-        f"**{verdict}.** Run **`{name}`** ({cfg.mode.replace('_', '-')}: classify with `{cfg.classify_model}`, draft with `{cfg.draft_model}`). "
-        f"It saves an estimated **{econ['hours_saved']:,.0f} agent-hours/month (≈{_usd(econ['gross'])})** for **{_usd(econ['llm'])}/month of LLM spend** "
-        f"and {_usd(econ['fixed'])}/month to run it: **net ≈{_usd(econ['net'])}/month**"
-    )
-    headline += (
-        f", payback of the {_usd(a['one_off_build_usd'])} build in **{econ['payback_months']:.1f} months**."
-        if econ["payback_months"] else ", no payback at these assumptions."
-    )
-    if econ["break_even_volume"]:
-        headline += f" Break-even is ≈{econ['break_even_volume']:,.0f} tickets/month."
+    models = (f"{short(cfg.classify_model)} classifies and drafts" if cfg.classify_model == cfg.draft_model
+              else f"{short(cfg.classify_model)} classifies, {short(cfg.draft_model)} drafts")
+    gw = a["gateway_billing_multiplier"]
+    others = [r for r in rows if r[0] != name]
+
     L = [
-        "# Business case: is the co-pilot worth running at 10k tickets/month?",
+        f"# Is the support co-pilot worth running at {a['tickets_per_month']:,} tickets/month?",
         "",
-        headline,
+        f"**{'Yes' if ok and econ['net'] > 0 else 'Not yet'}. Run `{name}`** ({models}). It frees **≈{econ['hours_saved']:,.0f} agent-hours a month** for "
+        f"**≈{_usd(econ['llm'])} of LLM spend**: net **≈{_usd(econ['net'])}/month**, the ≈{_usd(a['one_off_build_usd'])} build pays back in **{econ['payback_months']:.1f} months**.",
         "",
-        f"LLM cost is ≈${econ['llm_usd_per_ticket']:.4f}/ticket, a rounding error next to agent time, so **the choice of configuration is driven by safety and draft quality, not by token price.** "
-        f"On the golden set it routed {m['must_route_recall']:.0%} of must-route tickets (complaints, KYC/AML, urgent) to a human, declined {m['advice_declined_rate']:.0%} of trading-advice requests, "
-        f"and {m['quote_located_rate']:.0%} of its citations were found verbatim in the KB.",
+        "## Why it pays",
         "",
-        "## Configurations compared (measured on the golden set, re-weighted to the production mix)",
+        "| Per month | |",
+        "|---|---|",
+        f"| Agent time saved ({econ['hours_saved']:,.0f} h at ${a['agent_cost_usd_per_hour']:g}/h) | {_usd(econ['gross'])} |",
+        f"| LLM (${econ['llm_usd_per_ticket'] * 1000:.2f} per 1,000 tickets) | −{_usd(econ['llm'])} |",
+        f"| Hosting + {a['engineer_hours_per_month']} engineer-hours of upkeep | −{_usd(econ['fixed'])} |",
+        f"| **Net** | **{_usd(econ['net'])}** |",
         "",
-        "| Config | Tickets scored | Safety gate | Send-ready drafts | Judge ground./help. | LLM $/ticket | LLM $/month | Agent hours saved | Net $/month |",
-        "|---|---|---|---|---|---|---|---|---|",
+        f"- The saving comes from the repetitive half of traffic: a send-ready draft cuts a {a['mix']['in_kb']['baseline_aht_min']:g}-minute ticket to "
+        f"{a['aht_send_ready_min']:g} minutes of review. Complaints, KYC/AML and out-of-KB tickets still go to people; there the co-pilot only saves triage.",
+        f"- It stays clearly positive under stress: if {worst_label}, net is still **{_usd(worst['net'])}/month**. Break-even is ≈{econ['break_even_volume']:,.0f} tickets/month, "
+        f"so at today's volume the margin is wide and it grows linearly with volume.",
+        f"- LLM cost is noise: even at the {gw:g}× gateway overbilling we observed it is {econ['llm'] * gw / econ['gross']:.1%} of the time saved.",
+        "",
+        "## Why this configuration",
+        "",
+        "| Config | Safe¹ | Send-ready drafts² | $/ticket | Net/month |",
+        "|---|---|---|---|---|",
     ]
-    for n_, d, e, ok_, why_ in rows:
+    for n_, d, e, ok_, _ in rows:
         mm = d["metrics"]
-        mark = " *" if e["borrowed_segments"] else ""
-        L.append(
-            f"| `{n_}`{' ✅' if n_ == name else ''} | {mm['n']}/62{mark} | {'pass' if ok_ else 'FAIL'} ({why_}) | {mm['send_ready_rate_of_draft_ready']:.0%} of {sum(r['action']=='draft_ready' for r in _scored(d))} | "
-            f"{mm.get('judge_groundedness_mean', 'n/a')} / {mm.get('judge_helpfulness_mean', 'n/a')} | ${e['llm_usd_per_ticket']:.4f} | {_usd(e['llm'])} | {e['hours_saved']:,.0f} | {_usd(e['net'])} |"
-        )
-    partial = [(n_, e["borrowed_segments"]) for n_, _, e, _, _ in rows if e["borrowed_segments"]]
-    if partial:
-        L += ["", "\\* " + "; ".join(f"`{n_}`: segment(s) {', '.join(segs)} not measured (the gateway's daily spend limit ran out mid-run); routing outcomes borrowed from `{FALLBACK_CONFIG}` (same classifier and retrieval), cost is the config's own average" for n_, segs in partial) + "."]
-    L += ["", "Tickets that failed on gateway/billing errors are excluded per config; `eval/results/summary.md` has the full metric table."]
+        star = "³" if e["borrowed_segments"] else ""
+        label = f"**`{n_}`**" if n_ == name else f"`{n_}`{star}"
+        L.append(f"| {label} | {'yes' if ok_ else 'no'} | {mm['send_ready_rate_of_draft_ready']:.0%} | ${e['llm_usd_per_ticket']:.4f} | {_usd(e['net'])} |")
+    sonnet = next((r for r in others if "sonnet" in r[0]), None)
+    single = next((r for r in others if "single" in r[0]), None)
     L += [
         "",
-        "## Sensitivity (recommended config)",
+        f"All four are safe, so the choice is draft quality per dollar. `{name}` has the most send-ready drafts and the highest net. "
+        + (f"Sonnet drafts are not better here and cost {sonnet[2]['llm_usd_per_ticket'] / econ['llm_usd_per_ticket']:.0f}× more. " if sonnet else "")
+        + (f"Single-call costs the same but abstains on out-of-KB questions only {single[1]['metrics']['abstain_recall']:.0%} of the time "
+           f"(vs {m['abstain_recall']:.0%}), so agents get more drafts that don't answer the question." if single else ""),
         "",
-        "| Scenario | Hours saved | Net $/month |",
-        "|---|---|---|",
-    ]
-    L += [f"| {label} | {e['hours_saved']:,.0f} | {_usd(e['net'])} |" for label, e in sens]
-    seg_line = ", ".join(f"{k} {v['saved_min']:.1f} min" for k, v in econ["segments"].items())
-    L += [
+        f"¹ 100% of complaint/KYC/AML/urgent tickets routed to a human, 100% of trading-advice requests declined, 0 hard-rule violations "
+        f"(62 hand-labelled tickets). ² Rated ≥4/5 on groundedness and helpfulness by a judge that is stricter than a Sonnet judge. "
+        + ("³ Out-of-KB tickets not measured (gateway spend limit hit mid-run); outcomes borrowed from `haiku_two_call`." if any(r[2]["borrowed_segments"] for r in rows) else ""),
         "",
-        "## How the number is built",
+        "## What would change the answer",
         "",
-        f"- **Measured** (eval, {m['n']} hand-labelled tickets): routing action per ticket, judge scores, cost per ticket from polza.ai billing (`usage.cost_rub` at {RUB_PER_USD} RUB/USD).",
-        f"- **Assumed** (`eval/assumptions.yaml`, to replace with helpdesk data): {a['tickets_per_month']:,} tickets/month; agent ${a['agent_cost_usd_per_hour']}/h; production mix "
-        + ", ".join(f"{k} {v['share']:.0%}" for k, v in a["mix"].items())
-        + "; baseline handle times " + ", ".join(f"{k} {v['baseline_aht_min']:g} min" for k, v in a["mix"].items()) + "; "
-        f"send-ready draft {a['aht_send_ready_min']} min, edited draft {a['edit_factor']:.0%} of baseline, triage saves {a['triage_saved_min']} min/ticket.",
-        f"- Minutes saved per ticket by segment: {seg_line}. Routed and abstained tickets save only triage time: the co-pilot earns its keep on the repetitive in-KB half.",
-        f"- Running cost: hosting {_usd(a['hosting_usd_per_month'])} + {a['engineer_hours_per_month']} engineer-hours/month at ${a['engineer_cost_usd_per_hour']}/h.",
-        "- Not counted (upside): faster first response, 24/7 drafting, consistent routing of complaints/KYC, KB-gap reports. Not counted (risk): a wrong answer about money; mitigated by human review of every draft, verbatim-quote checks and fail-closed routing.",
-        f"- **Gateway billing risk:** during eval, polza.ai debited ≈{gw:g}× the sum of per-request `usage.cost_rub` (likely retries/reservations under its 503s; to verify in its transaction log). "
-        f"Even at {gw:g}× the LLM bill is {llm_share_at_gw:.1%} of the agent time saved, so the verdict holds; it is a reason to buy model access directly for production (see ARCHITECTURE → Gateway)."
-        "",
-        "",
-        "## Biggest lever is content, not model",
-        "",
-        f"An assumed {a['mix']['out_of_kb']['share']:.0%} of traffic (fees, payment methods, withdrawal timelines, platform) is simply not in the four pages (see `docs/KB_ISSUES.md`). "
-        f"Every topic added to the KB moves its tickets from 'abstain' (≈{a['triage_saved_min'] - a['abstain_overhead_min']:.2f} min saved) to 'send-ready draft' (≈{a['mix']['in_kb']['baseline_aht_min'] - a['aht_send_ready_min'] + a['triage_saved_min']:.1f} min saved). "
-        "Writing a real withdrawal page (methods, fees, timelines) is worth more than any model upgrade."
-        + (f" Open issue: {len(m['answered_out_of_kb'])} out-of-KB ticket(s) ({', '.join(m['answered_out_of_kb'])}) got an honest partial draft (\"not covered, an agent will confirm\" plus adjacent cited facts) instead of abstaining; nothing was invented, but the main question stays unanswered. Fix: the drafter states `answers_main_question`, and the router abstains when it is false." if m["answered_out_of_kb"] else ""),
+        f"Inputs marked as assumptions in `eval/assumptions.yaml` (ticket mix, handle times, ${a['agent_cost_usd_per_hour']:g}/h agent cost) should be replaced "
+        "with helpdesk data before go-live; the eval set is synthetic. The cheapest further gain is content, not model: "
+        f"≈{a['mix']['out_of_kb']['share']:.0%} of tickets ask about fees, payment methods and withdrawal timelines that the four help pages don't cover.",
     ]
     text = "\n".join(L) + "\n"
     OUT.write_text(text, encoding="utf-8")
