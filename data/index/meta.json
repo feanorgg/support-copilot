@@ -1,0 +1,6 @@
+{
+  "embed_model": "openai/text-embedding-3-small",
+  "n_chunks": 20,
+  "dim": 1536,
+  "cost_rub": 0.0024444
+}

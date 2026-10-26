@@ -1,0 +1,52 @@
+{
+  "slug": "how-to-deposit",
+  "url": "https://valetax.com/how-to-deposit/",
+  "title": "How to Deposit",
+  "intro": "Valetax offers a range of instant, simple and secure funding methods catering to your requirements and preferences",
+  "steps": [
+    "Log in to your Member Area",
+    "Select your preferred payment channel Click on the Deposit button and select your preferred payment channel",
+    "Enter your account details and amount to deposit",
+    "Start Trading!"
+  ],
+  "faq_title": "Got a question on Depositing and Withdrawing funds?",
+  "faq": [
+    {
+      "q": "What is the minimum deposit amount?",
+      "a": "The minimum deposit starts from 8 USD, depending on the account type."
+    },
+    {
+      "q": "How can I deposit funds into my account?",
+      "a": "You may log in to your member area and select the preferred payment option and deposit size."
+    },
+    {
+      "q": "What currencies can I use to deposit funds?",
+      "a": "You may deposit using any preferred currency into our USD account, which will follow that day’s exchange rates."
+    },
+    {
+      "q": "How long does it take for deposited funds to be credited to my balance?",
+      "a": "Deposits are instant! You will be able to view your updated account balance within 60 minutes."
+    },
+    {
+      "q": "When will my funds be available for trading?",
+      "a": "You can begin trading immediately once your balance has been updated."
+    },
+    {
+      "q": "Where can I view my deposit and withdrawal history?",
+      "a": "You may log in to your member area to view all transactions related to deposits, withdrawals and transfers."
+    },
+    {
+      "q": "What is my withdrawal request status ‘pending’?",
+      "a": "This means your request in in queue and in the midst of getting processed. Once approved, you will be notified."
+    },
+    {
+      "q": "Why was my withdrawal request rejected?",
+      "a": "It could be that your account has not been verified, a possible error to data entered or insifficient margin to process withdrawals. We will notify you via email on the rejection reason to help fix this issue."
+    },
+    {
+      "q": "I have not received my funds after my withdrawal request. What should I do?",
+      "a": "Should you not receive your funds within 24 hours, please reach out to our friendly support team for assistance."
+    }
+  ],
+  "snapshot_date": "2026-10-26"
+}

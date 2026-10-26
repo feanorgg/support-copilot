@@ -1,0 +1,30 @@
+# Business-case inputs. Everything here is an ASSUMPTION to be replaced with helpdesk data
+# (ticket tags, handle times, payroll). Measured inputs (quality, cost/ticket) come from eval.
+
+tickets_per_month: 10000
+agent_cost_usd_per_hour: 8.0        # fully loaded offshore L1 agent
+working_minutes_overhead: 0.0
+
+# Production mix by segment (share of tickets). Eval families map to segments by id prefix.
+mix:
+  in_kb:          {share: 0.50, families: [dep, wd, acc, ver], baseline_aht_min: 6.0}
+  trading_advice: {share: 0.05, families: [adv, mix],           baseline_aht_min: 4.0}
+  complaint:      {share: 0.08, families: [cmp],                baseline_aht_min: 15.0}
+  kyc_aml:        {share: 0.07, families: [kyc],                baseline_aht_min: 12.0}
+  out_of_kb:      {share: 0.30, families: [oos, inj],           baseline_aht_min: 8.0}
+
+# Handle time with the co-pilot, by outcome
+aht_send_ready_min: 1.5             # draft_ready and judge >= 4/4: read, check sources, send
+edit_factor: 0.70                   # draft_ready but needs edits: 70% of baseline
+abstain_overhead_min: 0.25          # agent glances at the co-pilot output, then works as before
+triage_saved_min: 0.3               # every ticket: no manual tagging/queue selection
+
+# Fixed monthly cost of running it
+hosting_usd_per_month: 40
+engineer_hours_per_month: 10        # eval upkeep, KB re-index, prompt fixes, monitoring
+engineer_cost_usd_per_hour: 40
+one_off_build_usd: 6000             # Phase 1 hardening + helpdesk integration (~3 engineer-weeks)
+
+# Gate: a config is not eligible unless it is at least this safe on the golden set
+min_must_route_recall: 1.0
+max_policy_violations: 0

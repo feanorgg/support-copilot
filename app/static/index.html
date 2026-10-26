@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Co-pilot</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5d6673; --border: #dde1e6;
+    --accent: #2457c5; --accent-weak: #e7eefc;
+    --ok: #1d7a46; --ok-bg: #e5f4ea; --warn: #9a6200; --warn-bg: #fdf1dc; --bad: #b42323; --bad-bg: #fbe6e6;
+    --mark: #fff0a8; --mark-active: #ffd54a; --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121418; --panel: #1b1e24; --text: #e6e8eb; --muted: #9aa3ae; --border: #2e333b;
+      --accent: #7aa2ff; --accent-weak: #1f2a44;
+      --ok: #58c487; --ok-bg: #173323; --warn: #f0b552; --warn-bg: #3a2c12; --bad: #ff7b7b; --bad-bg: #3d1a1a;
+      --mark: #5a4d12; --mark-active: #8a7313; --code: #23272e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; }
+  header span { color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.3fr) minmax(320px, 1.3fr); gap: 12px; padding: 12px 16px; align-items: start; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  section.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; min-width: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
+  textarea { width: 100%; min-height: 150px; resize: vertical; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+  select, button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); cursor: pointer; }
+  button.primary:disabled { opacity: .6; cursor: progress; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+  .row > select { flex: 1 1 140px; min-width: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { padding: 2px 8px; border-radius: 999px; background: var(--code); font-size: 12px; }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .action { padding: 10px; border-radius: 6px; font-weight: 600; margin: 8px 0; }
+  .action.draft_ready { background: var(--ok-bg); color: var(--ok); }
+  .action.specialist_review { background: var(--bad-bg); color: var(--bad); }
+  .action.abstain { background: var(--warn-bg); color: var(--warn); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  .draft { line-height: 1.75; }
+  .draft p { margin: 0 0 10px; }
+  .seg { border-bottom: 2px solid transparent; padding: 1px 0; }
+  .seg.grounded { border-bottom-color: var(--ok); }
+  .seg.unsupported, .seg.numeric_mismatch, .seg.forbidden { background: var(--bad-bg); border-bottom-color: var(--bad); }
+  .seg.kind-decline, .seg.kind-handoff, .seg.kind-unknown { border-bottom: 2px dashed var(--muted); }
+  .cite { font-size: 11px; vertical-align: super; margin-left: 1px; padding: 0 4px; border-radius: 4px; border: 1px solid var(--ok); color: var(--ok); background: var(--ok-bg); cursor: pointer; line-height: 1.3; }
+  .cite.fuzzy { border-color: var(--warn); color: var(--warn); background: var(--warn-bg); }
+  .cite.unverified, .cite.unknown_chunk { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
+  .issues { margin: 8px 0 0; padding-left: 18px; color: var(--bad); font-size: 13px; }
+  .note { background: var(--accent-weak); border-radius: 6px; padding: 8px 10px; margin-top: 10px; font-size: 13px; }
+  .source { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; scroll-margin-top: 12px; }
+  .source.active { outline: 2px solid var(--accent); }
+  .source .head { display: flex; gap: 8px; align-items: baseline; }
+  .source .n { font-weight: 700; color: var(--accent); }
+  .source .sec { font-weight: 600; }
+  .source .body { white-space: pre-wrap; margin-top: 6px; font-size: 13px; }
+  .source .links { margin-top: 6px; font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  mark.active { background: var(--mark-active); }
+  a { color: var(--accent); }
+  details summary { cursor: pointer; color: var(--muted); margin: 8px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td, th { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .empty { color: var(--muted); font-style: italic; }
+  .err { color: var(--bad); white-space: pre-wrap; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Support Co-pilot</h1>
+  <span>Classify · draft from the knowledge base with verifiable quotes · route to a human when required</span>
+</header>
+<main>
+  <section class="panel" aria-label="Ticket">
+    <h2>Ticket</h2>
+    <div class="row"><select id="examples"><option value="">Load an example…</option></select></div>
+    <textarea id="ticket" placeholder="Paste a customer ticket…"></textarea>
+    <div class="row">
+      <select id="config" title="Pipeline configuration"></select>
+      <button class="primary" id="run">Triage</button>
+    </div>
+    <div id="triage"></div>
+  </section>
+
+  <section class="panel" aria-label="Draft reply">
+    <h2>Draft reply</h2>
+    <div id="draft" class="empty">Run a ticket to see the draft.</div>
+    <div class="legend">
+      <span><span class="seg grounded">underlined</span> = claim backed by a verified quote</span>
+      <span><span class="cite">1</span> verified</span>
+      <span><span class="cite fuzzy">1</span> near-verbatim</span>
+      <span><span class="cite unverified">1!</span> not found in source</span>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Sources">
+    <h2>Sources</h2>
+    <div id="sources" class="empty">Cited knowledge-base excerpts appear here, with the quoted text highlighted.</div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let current = null;
+
+async function init() {
+  try {
+    const cfg = await (await fetch("/api/configs")).json();
+    $("config").innerHTML = cfg.configs.map((c) => `<option value="${esc(c.name)}" ${c.name === cfg.default ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+    const ex = await (await fetch("/api/examples")).json();
+    window._examples = ex;
+    $("examples").innerHTML += ex.map((e, i) => `<option value="${i}">${esc(e.label)}</option>`).join("");
+  } catch (e) { console.error(e); }
+}
+$("examples").addEventListener("change", (e) => { const ex = window._examples?.[e.target.value]; if (ex) $("ticket").value = ex.text; });
+
+$("run").addEventListener("click", async () => {
+  const ticket = $("ticket").value.trim();
+  if (ticket.length < 3) return;
+  $("run").disabled = true; $("run").textContent = "Working…";
+  try {
+    const r = await fetch("/api/triage", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticket, config: $("config").value }) });
+    if (!r.ok) throw new Error(await r.text());
+    current = await r.json();
+    render(current);
+  } catch (e) {
+    $("triage").innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  } finally { $("run").disabled = false; $("run").textContent = "Triage"; }
+});
+
+const ACTION_LABEL = { draft_ready: "Draft ready: review and send", specialist_review: "Route to specialist reviewer", abstain: "Not covered by KB: answer manually" };
+
+function render(res) {
+  renderTriage(res); renderDraft(res); renderSources(res);
+}
+
+function renderTriage(res) {
+  const c = res.classification;
+  const flags = [];
+  if (c?.trading_advice_request) flags.push(["trading advice", "warn"]);
+  if (c?.complaint) flags.push(["complaint", "bad"]);
+  if (c?.kyc_aml_decision_request) flags.push(["KYC/AML outcome", "bad"]);
+  for (const [k, v] of Object.entries(res.pre_guard_flags || {})) flags.push([`pre-guard: ${k}`, "warn"]);
+  const reasons = res.route.reasons.map((r) => `<span class="badge">${esc(r)}</span>`).join("");
+  $("triage").innerHTML = `
+    <div class="action ${res.route.action}">${esc(ACTION_LABEL[res.route.action])}</div>
+    <div class="badges">${reasons}</div>
+    ${c ? `<h3>Classification</h3>
+    <div class="badges">
+      <span class="badge">category: ${esc(c.category)}</span>
+      <span class="badge ${c.urgency === "high" ? "bad" : c.urgency === "medium" ? "warn" : ""}">urgency: ${esc(c.urgency)}</span>
+      <span class="badge">language: ${esc(c.language)}</span>
+      <span class="badge ${c.sentiment === "negative" ? "bad" : c.sentiment === "positive" ? "ok" : ""}">sentiment: ${esc(c.sentiment)}</span>
+      ${flags.map(([f, cls]) => `<span class="badge ${cls}">${esc(f)}</span>`).join("")}
+    </div>
+    <p class="muted small">${esc(c.summary)}</p>` : `<p class="err">Classification failed.</p>`}
+    ${res.errors.length ? `<div class="err">${res.errors.map(esc).join("<br>")}</div>` : ""}
+    <details><summary>Cost & latency: $${res.cost_usd.toFixed(5)} · ${res.latency_ms} ms · grounding ${res.grounding_score ?? "n/a"}</summary>
+      <table><tr><th>stage</th><th>model</th><th>in/out tok</th><th>RUB</th><th>ms</th></tr>
+      ${res.calls.map((k) => `<tr><td>${esc(k.stage)}</td><td>${esc(k.model)}</td><td>${k.prompt_tokens}/${k.completion_tokens}</td><td>${k.cost_rub.toFixed(4)}</td><td>${k.latency_ms}</td></tr>`).join("")}
+      </table></details>`;
+}
+
+function renderDraft(res) {
+  const el = $("draft");
+  el.classList.remove("empty");
+  if (res.abstain && !res.segments.length) {
+    el.innerHTML = `<div class="action abstain">No draft: ${esc(res.abstain_reason || "not covered by the knowledge base")}</div>${res.agent_note ? `<div class="note"><b>Note for agent:</b> ${esc(res.agent_note)}</div>` : ""}`;
+    return;
+  }
+  const paras = [[]];
+  res.segments.forEach((s, i) => {
+    const marks = s.citations.map((c) => `<button class="cite ${c.status}" data-n="${c.n}" title="${esc(c.chunk_id)}: ${esc(c.status)}">${c.n}${["unverified", "unknown_chunk"].includes(c.status) ? "!" : ""}</button>`).join("");
+    const html = `<span class="seg ${s.status} kind-${s.kind}" title="${esc(s.kind)} · ${esc(s.status)}">${esc(s.text)}</span>${marks}`;
+    if (s.kind === "boilerplate") { if (paras.at(-1).length) paras.push([]); paras.at(-1).push(html); paras.push([]); }
+    else paras.at(-1).push(html);
+  });
+  const issues = res.segments.flatMap((s) => s.issues.map((i) => `“${s.text.slice(0, 60)}${s.text.length > 60 ? "…" : ""}”: ${i}`));
+  el.innerHTML = `
+    <div class="draft">${paras.filter((p) => p.length).map((p) => `<p>${p.join(" ")}</p>`).join("")}</div>
+    <div class="row"><button id="copy">Copy clean reply</button><span class="muted small" id="copied"></span></div>
+    ${issues.length ? `<ul class="issues">${issues.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
+    ${res.agent_note ? `<div class="note"><b>Note for agent:</b> ${esc(res.agent_note)}</div>` : ""}`;
+  $("copy").onclick = async () => { try { await navigator.clipboard.writeText(res.reply_text); $("copied").textContent = "Copied"; } catch { $("copied").textContent = "Copy failed"; } };
+  el.querySelectorAll(".cite").forEach((b) => b.addEventListener("click", () => focusSource(+b.dataset.n)));
+}
+
+function textFragment(s) {
+  const enc = (t) => encodeURIComponent(t).replace(/-/g, "%2D").replace(/,/g, "%2C");
+  const words = s.trim().split(/\s+/);
+  if (words.length <= 8) return enc(words.join(" "));
+  return `${enc(words.slice(0, 4).join(" "))},${enc(words.slice(-4).join(" "))}`;
+}
+
+function highlight(text, spans) {
+  spans.sort((a, b) => a.start - b.start);
+  let out = "", pos = 0;
+  for (const sp of spans) {
+    if (sp.start < pos) continue; // overlapping quotes: keep the first
+    out += esc(text.slice(pos, sp.start)) + `<mark data-n="${sp.n}">${esc(text.slice(sp.start, sp.end))}</mark>`;
+    pos = sp.end;
+  }
+  return out + esc(text.slice(pos));
+}
+
+function renderSources(res) {
+  const el = $("sources");
+  el.classList.remove("empty");
+  const chunks = Object.fromEntries(res.retrieved.map((h) => [h.chunk.id, h]));
+  const cited = new Map(); // chunk_id -> {n, spans}
+  for (const s of res.segments) for (const c of s.citations) {
+    if (!cited.has(c.chunk_id)) cited.set(c.chunk_id, { n: c.n, spans: [], bad: [] });
+    const entry = cited.get(c.chunk_id);
+    if (c.start != null) entry.spans.push({ start: c.start, end: c.end, n: c.n });
+    else entry.bad.push(c.quote);
+  }
+  const citedHtml = [...cited.entries()].sort((a, b) => a[1].n - b[1].n).map(([id, e]) => {
+    const h = chunks[id];
+    if (!h) return `<div class="source" id="src-${e.n}"><div class="head"><span class="n">[${e.n}]</span><span class="sec">${esc(id)}</span></div><p class="err">This id was not among the excerpts given to the model.</p></div>`;
+    const [heading, ...rest] = h.chunk.text.split("\n");
+    const offset = heading.length + 1;
+    const bodyText = rest.join("\n");
+    const bodySpans = e.spans.filter((s) => s.start >= offset).map((s) => ({ ...s, start: s.start - offset, end: s.end - offset }));
+    const fragSrc = e.spans.length ? h.chunk.text.slice(e.spans[0].start, e.spans[0].end) : "";
+    const links = h.chunk.urls.map((u, i) => `<a href="${esc(u)}${fragSrc ? "#:~:text=" + textFragment(fragSrc) : ""}" target="_blank" rel="noopener">${esc(h.chunk.page_titles[i])} ↗</a>`).join("");
+    return `<div class="source" id="src-${e.n}">
+      <div class="head"><span class="n">[${e.n}]</span><span class="sec">${esc(heading)}</span><span class="muted small">score ${h.score.toFixed(2)}</span></div>
+      <div class="body">${highlight(bodyText, bodySpans)}</div>
+      ${e.bad.length ? `<p class="err small">Quote not found in this excerpt: “${e.bad.map(esc).join("”, “")}”</p>` : ""}
+      <div class="links">${links}</div></div>`;
+  }).join("");
+  const unused = res.retrieved.filter((h) => !cited.has(h.chunk.id));
+  const unusedHtml = unused.length ? `<details><summary>Retrieved but not cited (${unused.length})</summary>${unused.map((h) => `
+      <div class="source"><div class="head"><span class="sec">${esc(h.chunk.section)}</span><span class="muted small">score ${h.score.toFixed(2)}${h.passed_to_llm ? "" : " · below threshold"}</span></div>
+      <div class="body">${esc(h.chunk.text.split("\n").slice(1).join("\n"))}</div>
+      <div class="links">${h.chunk.urls.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(h.chunk.page_titles[i])} ↗</a>`).join("")}</div></div>`).join("")}</details>` : "";
+  el.innerHTML = (citedHtml || `<p class="empty">No citations in this reply.</p>`) + unusedHtml;
+}
+
+function focusSource(n) {
+  document.querySelectorAll(".source.active, mark.active").forEach((x) => x.classList.remove("active"));
+  const src = $(`src-${n}`);
+  if (!src) return;
+  src.classList.add("active");
+  src.querySelectorAll(`mark[data-n="${n}"]`).forEach((m) => m.classList.add("active"));
+  src.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+init();
+</script>
+</body>
+</html>

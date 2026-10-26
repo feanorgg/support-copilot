@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    image: valetax-copilot
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      # eval outputs and regenerated docs persist on the host
+      - ./eval/results:/app/eval/results
+      - ./docs:/app/docs
+      - ./data:/app/data
