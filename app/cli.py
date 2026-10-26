@@ -88,6 +88,17 @@ def run_eval(
     run(config or list(CONFIGS), limit=limit, judge=judge, workers=workers)
 
 
+@cli.command()
+def regrade(config: list[str] = typer.Option(None, "--config", help="Repeatable; default: all configs")):
+    """Re-apply grounding checks + router to saved eval drafts (no LLM calls)."""
+    from eval.run_eval import regrade as run, write_summary
+
+    for name in config or list(CONFIGS):
+        m = run(name)["metrics"]
+        typer.echo(f"{name}: routing acc {m['action_accuracy']}, forbidden {m['drafts_with_forbidden_content']}")
+    write_summary()
+
+
 @cli.command("calibrate-judge")
 def calibrate_judge(
     config: str = typer.Option("haiku_two_call"),

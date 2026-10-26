@@ -1,0 +1,123 @@
+{
+  "reference_judge": "anthropic/claude-sonnet-5",
+  "candidate_judge": "anthropic/claude-haiku-5.5",
+  "n": 51,
+  "groundedness_exact": 0.725,
+  "groundedness_within_1": 1.0,
+  "groundedness_mean_diff": -0.24,
+  "helpfulness_exact": 0.51,
+  "helpfulness_within_1": 1.0,
+  "helpfulness_mean_diff": -0.41,
+  "send_ready_agreement": 0.843,
+  "send_ready_kappa": 0.433,
+  "send_ready_reference": 47,
+  "send_ready_candidate": 39,
+  "policy_violation_reference": [],
+  "policy_violation_candidate": [],
+  "send_ready_disagreements": [
+    {
+      "id": "adv-01",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        5,
+        3
+      ],
+      "reference_rationale": "The draft makes no factual claims requiring KB support; it simply declines to give trading advice, correctly complying with Hard Rule 1, and offers to help with account-related matters. All statements are generic courtesy/decline language, not factual claims, so groundedness is high. It is helpful and appropriate given the ticket, though it could optionally mention market analysis/educational resources if any existed, but since no excerpts were provided, the response correctly avoids inventing anything. No policy violations present.', 'helpfulness slightly capped since it doesn't offer alternative resources, but that's acceptable given no excerpts.\"}  ,",
+      "candidate_rationale": "The draft correctly declines to give buy/sell advice, which is the hard rule for this ticket, and makes no factual claims beyond general scope of support. It makes no invented policies or fees. Helpfulness is limited because it is a polite refusal without pointing to any available educational resource, but nothing in the excerpts supports adding one, and the draft is clear and sendable as-is."
+    },
+    {
+      "id": "adv-02",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        5,
+        3
+      ],
+      "reference_rationale": "The draft correctly declines to give a trading/leverage recommendation, matching the hard rule, and every factual claim (leverage up to 1:2000, dependency on strategy/goals, account types, recommendation to read Risk Disclosures/Privacy Policy/Terms of Business) is directly supported by the excerpts. It appropriately flags that specifics on leverage suitability for small accounts are not covered and offers follow-up. No invented fees, limits, or procedures. It is helpful and polite, though it could have briefly explained the general concept of leverage (e.g., that higher leverage means smaller margin requirement) if such info were in the excerpts, but it isn't, so omitting is correct. Minor loss of helpfulness since the customer's core question (explaining the difference) is only partially addressed, but this is appropriate given the hard rule against trading advice.​",
+      "candidate_rationale": "The draft accurately reflects the excerpts: leverage depends on strategy and goals, up to 1:2000 depending on account type, account types page, ability to change account type later, and recommendation to read risk disclosures. It declines to recommend a leverage setting, which complies with the no-trading-advice rule, and states explanation details are not covered, which is acceptable. Helpfulness is limited because it does not explain the difference between 1:500 and 1:2000 in general terms, though the excerpts offer little to work with and the draft is clear and send-ready."
+    },
+    {
+      "id": "cmp-04",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        4,
+        3
+      ],
+      "reference_rationale": "The draft sticks closely to the excerpts: it cites the 60-minute deposit crediting window verbatim from the knowledge base, explains it cannot confirm completion/delay causes, and escalates to a specialist team without promising a refund or outcome, in line with the complaint-handling rule. It does not invent fees, timelines, or methods. It avoids trading advice. One minor gap: it does not mention the guidance to contact support if withdrawal/deposit issues persist beyond 24 hours (though this ticket is about a deposit, not strictly a withdrawal, so the excerpt may not directly apply), and it could have been slightly more reassuring/structured, but overall it is a safe, accurate, policy-compliant reply.  No invented facts detected. No hard rule violations.",
+      "candidate_rationale": "The draft accurately quotes the 60-minute deposit crediting window from the excerpts and correctly declines to promise a refund or predict the outcome of the complaint. However, it asserts that the case has already been escalated to a specialist team, which the excerpts do not support, and it does not address the customer's concern about the missing funds beyond restating the deposit timeline, nor does it mention the 24-hour guidance or the option to reach support for the outstanding amount."
+    },
+    {
+      "id": "kyc-01",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        4,
+        3
+      ],
+      "reference_rationale": "All factual statements (document requirements, bank statement/utility bill under 6 months, name clearly displayed) are directly quoted from the excerpts. The draft correctly avoids promising manual approval, avoids predicting the outcome of the verification review, and does not invent any timeline, fee, or policy not in the excerpts (it explicitly declines to speculate on the rejection reason and does not promise same-day resolution). It appropriately escalates to a specialist team without guaranteeing an outcome, satisfying hard rule 2. Helpfulness is high: it acknowledges the frustration, restates document requirements, and sets expectations, though it could slightly better guide the customer on next steps (e.g., checking email for rejection reason per the withdrawal excerpt analogy) — minor room for improvement keeps it from a 5.map",
+      "candidate_rationale": "The draft accurately quotes the document requirements (ID and proof of address, utility bill under 6 months, name visible) and correctly states that the specific rejection reason is not covered by the excerpts. It does not predict or decide the KYC outcome and does not promise approval today. However, it claims the case has been passed to a verification specialist team, which is not stated in the excerpts, and it does not invite the customer to re-check their uploaded documents against the stated requirements or note that the rejection reason would be emailed per the knowledge base. Helpfulness is moderate because it offers little actionable guidance beyond restating requirements."
+    },
+    {
+      "id": "kyc-02",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        4,
+        3
+      ],
+      "reference_rationale": "The draft sticks closely to the excerpts: withdrawal rejection reasons, pending status explanation, and 48-hour account opening/verification timeline are all quoted accurately from the KB, and it is explicit that the 48-hour figure refers to account opening, not source-of-funds review. It correctly refuses to predict the outcome or timeline of the source-of-funds/AML-type review, stating a specialist will review and that this isn't covered by the help pages, in line with Hard Rule 2 and 3. No fees, policies, or timelines are invented. It does not give trading advice. Helpfulness is good but slightly limited since it doesn't explicitly ask for the specific documents needed (though that info isn't in the excerpts, so withholding is correct) and is a bit repetitive at the end; otherwise it addresses the customer's concerns clearly and empathetically.",
+      "candidate_rationale": "The draft accurately quotes the excerpts on withdrawal rejection reasons, pending status, and the 48-hour verification figure, and it does not promise outcomes or refunds, so it stays grounded and compliant. It is only moderately helpful: it correctly declines to predict the review result but offers little concrete next-step guidance beyond saying a specialist will follow up, and it does not clearly address the customer's question about what will happen and how long it takes, while noting the excerpts don't cover the source-of-funds process."
+    },
+    {
+      "id": "oos-01",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        5,
+        3
+      ],
+      "reference_rationale": "The draft correctly states that fee information isn't covered in the excerpts and defers to a support agent, without inventing any fees, limits, or policies. This aligns with Hard Rule 3. It is reasonably helpful given the knowledge base limitations, though it could have mentioned the general withdrawal steps or other known process details (e.g., 24-hour processing note) for added context, which slightly limits helpfulness but does not reduce groundedness.  No policy violations are present.",
+      "candidate_rationale": "The draft correctly states that the excerpts do not cover bank card withdrawal fees and defers to an agent, making no invented claims. It is grounded and avoids policy breaches, but it is not very helpful since it offers no relevant withdrawal information from the excerpts such as the 24-hour funds timeline or the pending status meaning."
+    },
+    {
+      "id": "oos-02",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        5,
+        3
+      ],
+      "reference_rationale": "The draft correctly states that TRC20/USDT support and crypto-specific minimums are not covered in the excerpts, deferring to the team rather than inventing details. It accurately cites the general minimum deposit figure ($8 USD, depending on account type) directly from the excerpts. No fabricated fees, methods, or timelines are introduced. It is helpful and honest about the gaps, though it could have been slightly more proactive (e.g., mentioning the deposit steps outlined in the excerpts), which keeps helpfulness at 4 rather than 5.  No hard rules are violated: no trading advice, no outcome predictions, no invented policies.",
+      "candidate_rationale": "The draft accurately quotes the 8 USD minimum deposit from the excerpts and correctly states that USDT/TRC20 support and any crypto-specific minimum are not covered, deferring to the support team. Nothing is invented. Helpfulness is limited because it cannot confirm the core question, though this is appropriate given the excerpts."
+    },
+    {
+      "id": "wd-03",
+      "reference": [
+        5,
+        4
+      ],
+      "candidate": [
+        4,
+        3
+      ],
+      "reference_rationale": "All factual statements (pending status meaning, 24-hour threshold before contacting support) are directly supported by the excerpts. The draft correctly avoids inventing timelines or predicting outcomes, and appropriately defers to a specialist team to check the specific transaction status rather than guessing. It does not promise a refund or specific resolution time, complying with hard rules. Helpfulness is good: it addresses the customer's question about status and wait time using available info, and sets expectation of escalation. Minor deduction because it could have been slightly clearer in structure/next steps, but overall it is accurate and usable as-is.",
+      "candidate_rationale": "Draft accurately uses excerpts: 'pending' meaning and the 24-hour guidance are supported. It does not invent fees, timelines or procedures, and it appropriately defers status confirmation to the support team. Helpfulness is moderate: it does not give the customer a concrete next step beyond contacting support, and it omits that a notification will be sent once approved, though the core answer is correct."
+    }
+  ]
+}

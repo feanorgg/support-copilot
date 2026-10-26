@@ -179,3 +179,8 @@ def test_holding_reply_without_claims_is_abstain():
     ]
     d = _route(segments=segs)
     assert d.action == "abstain" and "partial_answer" in d.reasons
+
+
+def test_negated_decline_is_not_trading_advice():
+    assert not output_violations("We are unable to generate trading signals, so we cannot log a BUY signal for GBPUSD.")
+    assert output_violations("Here is your BUY signal for GBPUSD.")

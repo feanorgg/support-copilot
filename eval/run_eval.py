@@ -15,7 +15,7 @@ from app.llm import LLMError
 from app.pipeline import triage
 from app.schemas import TriageResult
 from eval.generate import load_tickets
-from eval.judge import judge
+from eval.judge import JudgeVerdict, judge
 
 CALIBRATION_DIR = RESULTS_DIR / "calibration"
 
@@ -246,6 +246,41 @@ def calibrate_judge(config: str, reference_model: str, workers: int = 6) -> dict
     return agreement
 
 
+def regrade(config: str) -> dict:
+    """Re-apply the deterministic layer (grounding checks + router) to saved drafts, keeping the
+    saved judge verdicts. Use after changing guardrails/router; no LLM calls."""
+    from app.config import get_config as _cfg
+    from app.grounding import ground_segments
+    from app.kb.index import chunk_by_id
+    from app.pipeline import render_reply
+    from app.router import route
+    from app.schemas import Citation, Segment
+
+    cfg = _cfg(config)
+    by_text = {t["text"]: t for t in load_tickets() if t.get("text")}
+    old = {r["id"]: r for r in json.loads((RESULTS_DIR / f"{config}.json").read_text(encoding="utf-8"))["rows"]}
+    results = load_raw(config)
+    rows = []
+    for res in results:
+        if res.segments:
+            segs = [Segment(text=s.text, kind=s.kind, citations=[Citation(chunk_id=c.chunk_id, quote=c.quote) for c in s.citations]) for s in res.segments]
+            allowed = {h.chunk.id for h in res.retrieved if h.passed_to_llm}
+            res.segments, res.grounding_score = ground_segments(segs, chunk_by_id(), allowed, res.ticket)
+            res.reply_text = render_reply(res.segments)
+        res.route = route(classification=res.classification, pre_flags=res.pre_guard_flags, abstain=res.abstain,
+                          segments=res.segments, grounding_score=res.grounding_score,
+                          min_grounding_score=cfg.min_grounding_score, errors=res.errors)
+        t = by_text[res.ticket]
+        prev = old.get(t["id"], {})
+        verdict = JudgeVerdict.model_validate(prev["judge"]) if prev.get("judge") else None
+        rows.append(_row(t, res, verdict, prev.get("judge_cost_rub", 0.0)))
+    judge_model = json.loads((RESULTS_DIR / f"{config}.json").read_text(encoding="utf-8"))["metrics"].get("judge_model")
+    data = {"config": config, "metrics": compute_metrics(rows) | {"judge_model": judge_model}, "rows": rows}
+    (RESULTS_DIR / f"{config}.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    (RESULTS_DIR / f"{config}.raw.jsonl").write_text("\n".join(r.model_dump_json() for r in results) + "\n", encoding="utf-8")
+    return data
+
+
 def _send_ready(j: dict) -> bool:
     return j["groundedness"] >= 4 and j["helpfulness"] >= 4 and not j["policy_violation"]
 
@@ -322,8 +357,13 @@ def load_results() -> dict[str, dict]:
 def write_summary() -> str:
     results = load_results()
     names = list(results)
-    lines = ["# Eval summary", "", f"Golden set: {results[names[0]]['metrics']['n']} tickets (see `eval/specs.yaml`).", "",
-             "| Metric | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
+    lines = ["# Eval summary", "",
+             "Golden set: 62 hand-labelled tickets (`eval/specs.yaml`). Tickets that failed on gateway/billing "
+             "errors (polza 402/503/timeouts) are excluded from quality metrics and counted separately.", "",
+             "| Metric | " + " | ".join(names) + " |", "|---|" + "---|" * len(names),
+             "| Tickets scored | " + " | ".join(str(results[n_]["metrics"]["n"]) for n_ in names) + " |",
+             "| Excluded (gateway errors) | " + " | ".join(str(len(results[n_]["metrics"].get("infra_errors_excluded", []))) for n_ in names) + " |",
+             "| Judge | " + " | ".join(str(results[n_]["metrics"].get("judge_model", "n/a")).split("/")[-1] for n_ in names) + " |"]
     for key, label in SUMMARY_KEYS:
         vals = []
         for nme in names:

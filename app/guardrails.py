@@ -88,12 +88,17 @@ def pre_screen(ticket: str) -> dict[str, list[str]]:
 _CONDITIONAL = re.compile(r"\b(once|when|after|if|until|as soon as)\s+(\w+\s+){0,2}$", _I)
 
 
+# "We cannot provide a BUY signal" is a decline, not advice.
+_NEGATED = re.compile(r"\b(cannot|can't|can not|unable|not able|won't|will not|do not|don't|never|no)\b", _I)
+
+
 def output_violations(text: str) -> list[str]:
     found = []
     for name, patterns in _OUT.items():
         for p in patterns:
             for m in p.finditer(text):
-                if _CONDITIONAL.search(text[max(0, m.start() - 30):m.start()]):
+                before = text[max(0, m.start() - 60):m.start()]
+                if _CONDITIONAL.search(before[-30:]) or _NEGATED.search(before):
                     continue
                 found.append(f"{name}: '{m.group(0)}'")
                 break

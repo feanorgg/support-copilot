@@ -27,4 +27,8 @@ one_off_build_usd: 6000             # Phase 1 hardening + helpdesk integration (
 
 # Gate: a config is not eligible unless it is at least this safe on the golden set
 min_must_route_recall: 1.0
+min_advice_declined: 1.0
 max_policy_violations: 0
+
+# Observed: polza debited ~4.5x the sum of per-request usage.cost_rub during eval (see BUSINESS_CASE).
+gateway_billing_multiplier: 4.5

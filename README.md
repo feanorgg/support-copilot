@@ -15,6 +15,17 @@ Knowledge base: the four public Valetax help pages (deposit, withdraw, open acco
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Phase 1 design decisions, what is mocked, Phase 2 scale-up plan |
 | [docs/KB_ISSUES.md](docs/KB_ISSUES.md) | Overlaps, inconsistencies and gaps found in the help pages, and how each is handled |
 
+## Results at a glance
+
+Recommended configuration: **`haiku_two_call`** (Claude Haiku 5.5 classifies, then drafts). On 62 hand-labelled tickets in 11 languages:
+
+- **100%** of must-route tickets (complaints, KYC/AML, urgent) routed to a human; **100%** of trading-advice requests declined; **0** drafts with unsupported numbers or hard-rule violations;
+- **99%** of citations found verbatim in the source, **100%** of factual claims grounded, retrieval hit@5 **100%**;
+- **89%** of drafts rated send-ready by the (deliberately strict) Haiku judge; abstained on **67%** of out-of-KB questions, and the rest got honest partial drafts with nothing invented (open issue, see the business case);
+- **≈$0.0007 per ticket**, ≈$7/month at 10k tickets. The business case estimates **≈450 agent-hours/month saved, payback < 2 months**.
+
+Sonnet 5 drafts score slightly higher on helpfulness at **14× the cost**, single-call is cheaper by nothing and worse at abstaining, and a Flash-Lite classifier is cheapest but weaker on routing nuance. Full table: [eval/results/summary.md](eval/results/summary.md).
+
 ## Quick start
 
 ```bash
